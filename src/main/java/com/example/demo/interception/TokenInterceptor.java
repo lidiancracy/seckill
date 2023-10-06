@@ -40,14 +40,16 @@ public class TokenInterceptor implements HandlerInterceptor {
                     String token = cookie.getValue();
 
                     // 验证Redis中是否包含该token
-                    String userJson = redisTemplate.opsForValue().get("user:" + token);
-                    log.info("userjson" + userJson);
+                    String userJson = redisTemplate.opsForValue().get("user:token:" + token);
                     if (userJson != null) {
                         TUser user = JSON.parseObject(userJson, TUser.class);
                         UserContext.setUser(user);
 
-                        // 重置token的过期时间
-                        redisTemplate.expire("user:" + token, 30, TimeUnit.MINUTES);
+                        // 重置token映射的过期时间
+                        redisTemplate.expire("user:token:" + token, 30, TimeUnit.MINUTES);
+
+                        // 重置手机号映射的过期时间
+                        redisTemplate.expire("user:id:" + user.getId(), 30, TimeUnit.MINUTES);
 
                         return true;
                     }
@@ -59,6 +61,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         response.sendRedirect("/login/lg"); //重定向到登录页面
         return false;
     }
+
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {

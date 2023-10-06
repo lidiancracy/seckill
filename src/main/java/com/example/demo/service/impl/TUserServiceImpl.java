@@ -38,7 +38,7 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
     @Autowired
     TUserMapper tUserMapper;
     @Autowired
-    RedisTemplate redisTemplate;
+    RedisTemplate<String, String> redisTemplate;
     @Override
     public Result<String> loginservice(loginvo loginvo, HttpServletResponse response) {
         String mobile = loginvo.getMobile();
@@ -56,15 +56,19 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
         }
         UserContext.setUser(user);
         // 生成token并存入Redis，设置有效期为30分钟
-        String token = randomUUID().toString();
-        // 使用RedisTemplate存储token
-        String userJson = JSON.toJSONString(user);
-        redisTemplate.opsForValue().set("user:" + token, userJson, 30, TimeUnit.MINUTES);
+        String token = redisTemplate.opsForValue().get("user:id:" + mobile);
+        if (token == null || redisTemplate.opsForValue().get("user:token:" + token) == null) {
+            // Generate a new token if not exist or user data not associated with the token
+            token = randomUUID().toString();
+            redisTemplate.opsForValue().set("user:id:" + mobile, token, 30, TimeUnit.MINUTES);
+        }
+        // Update or set the user data associated with the token
+        redisTemplate.opsForValue().set("user:token:" + token, JSON.toJSONString(user), 30, TimeUnit.MINUTES);
 
         // 存储token到cookie中
         Cookie cookie = new Cookie("token", token);
         cookie.setPath("/");
-        cookie.setMaxAge(30 * 60);  // 设置有效期为30分钟
+        cookie.setMaxAge(30 * 60);
         response.addCookie(cookie);
 
         // 4. 返回登录成功
