@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.Rabbitmq.SeckillMessage;
+import com.example.demo.Rabbitmq.SeckillMessageSender;
 import com.example.demo.interception.UserContext;
 import com.example.demo.pojo.TOrder;
 import com.example.demo.pojo.TUser;
@@ -44,71 +46,43 @@ public class secskillcontroller {
 
     @Autowired
     RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    SeckillMessageSender seckillMessageSender;
     @RequestMapping(value = "/do_seckill", method = RequestMethod.POST)
     public String doSeckill(Long goodsId, Model model) {
-
         TUser user = UserContext.getUser();
         goodsvo goods = tGoodsService.findGoodsVoById(goodsId);
+        // 检查用户是否已经参与过秒杀
+        if (tOrderService.checkRepeatSeckill(user.getId(), goodsId)) {
+            model.addAttribute("errmsg", "您已经参与过此次秒杀，请勿重复操作。");
+            return "seckill_fail";
+        }
 
-
-        // 预减库存
-//        String lockKey = "seckilling:goods:" + goodsId;
-//        Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(lockKey, "locked", 5, TimeUnit.SECONDS); // 尝试获取锁，最多锁定5秒
-//
-//        if (!isLocked) {
-//            // 不能获取锁，说明有其他请求正在处理，可以直接返回或重试
-//            model.addAttribute("errmsg", "秒杀太火爆，请稍后再试");
-//            return "seckill_fail";
-//        }
-//
-//        Integer currentStock = (Integer) redisTemplate.opsForValue().get("seckillinit:goods:" + goodsId);
-//
-//        if (currentStock <= 0) {
-//            model.addAttribute("errmsg", CodeMsg.STOCK_MIAOSHA.getMsg());
-//            redisTemplate.delete(lockKey); // 释放锁
-//            return "seckill_fail";
-//        } else {
-//            redisTemplate.opsForValue().decrement("seckillinit:goods:" + goodsId);
-//            redisTemplate.delete(lockKey); // 释放锁
-//            // 之后的逻辑...
-//        }
-
+        // 获取并预减Redis库存
         Integer currentStock = (Integer) redisTemplate.opsForValue().get("seckillinit:goods:" + goodsId);
 
-        if (currentStock <= 0) {
+        if (currentStock == null || currentStock <= 0) {
             model.addAttribute("errmsg", CodeMsg.STOCK_MIAOSHA.getMsg());
             return "seckill_fail";
-        } else {
-            redisTemplate.opsForValue().decrement("seckillinit:goods:" + goodsId);
-            // 之后的逻辑...
         }
+
+        // 如果库存充足则预减库存
+        redisTemplate.opsForValue().decrement("seckillinit:goods:" + goodsId);
 
         if (goods == null || goods.getStockCount() <= 0) {
             model.addAttribute("errmsg", CodeMsg.STOCK_MIAOSHA.getMsg());
             return "seckill_fail";
         }
 
-        // 检查是否已经秒杀过了
-//        if (tOrderService.checkRepeatSeckill(user.getId(), goodsId)) {
-//            model.addAttribute("errmsg", CodeMsg.REPEATE_MIAOSHA.getMsg());
-//            return "seckill_fail";
-//        }
+        // 发送消息至RabbitMQ进行异步处理
+        SeckillMessage message = new SeckillMessage();
+        message.setUser(user);
+        message.setGoods(goods);
+        seckillMessageSender.sendSeckillMessage(message);
 
-        // 执行秒杀逻辑（减库存，生成订单等）
-        TOrder od = tOrderService.executeSeckill(user, goods);
-
-        if (od == null) {
-            model.addAttribute("errmsg", "秒杀失败");
-            return "seckill_fail";
-        }
-
-        model.addAttribute("orderInfo", od);
-        model.addAttribute("goods",goods);
-        System.out.println("order信息"+od.toString());
-        System.out.println("order信息"+goods.toString());
-        return "order_detail";
+        // 返回用户等待页面
+        return "queueing";
     }
-
 
     @PostConstruct  // 或在其他初始化方法中
     public void loadGoodsStockToRedis() {

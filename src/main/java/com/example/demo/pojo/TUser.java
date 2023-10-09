@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 @TableName("t_user")
 @AllArgsConstructor
 @NoArgsConstructor
-public class TUser {
+public class TUser implements Serializable {
 //用户ID,手机号码    private Long id;
 
     private BigInteger id;
