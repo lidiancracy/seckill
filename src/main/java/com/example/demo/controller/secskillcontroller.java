@@ -17,12 +17,17 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -80,8 +85,24 @@ public class secskillcontroller {
         message.setGoods(goods);
         seckillMessageSender.sendSeckillMessage(message);
 
+        // 创建唯一任务ID并将其与初始状态关联
+        String taskId = UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set("seckill:task:" + taskId, "waiting");
+
+// 将任务ID添加到模型以供前端使用
+        model.addAttribute("taskId", taskId);
+
         // 返回用户等待页面
         return "queueing";
+    }
+
+    @RequestMapping(value = "/status", method = RequestMethod.GET)
+    @ResponseBody
+    public Map<String, Object> seckillStatus(@RequestParam String taskId) {
+        String status = (String) redisTemplate.opsForValue().get("seckill:task:" + taskId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", status);
+        return result;
     }
 
     @PostConstruct  // 或在其他初始化方法中
