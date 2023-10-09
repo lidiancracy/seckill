@@ -60,10 +60,10 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
         if (token == null || redisTemplate.opsForValue().get("user:token:" + token) == null) {
             // Generate a new token if not exist or user data not associated with the token
             token = randomUUID().toString();
-            redisTemplate.opsForValue().set("user:id:" + mobile, token, 30, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set("user:id:" + mobile, token, 60, TimeUnit.MINUTES);
         }
         // Update or set the user data associated with the token
-        redisTemplate.opsForValue().set("user:token:" + token, JSON.toJSONString(user), 30, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set("user:token:" + token, JSON.toJSONString(user), 60, TimeUnit.MINUTES);
 
         // 存储token到cookie中
         Cookie cookie = new Cookie("token", token);

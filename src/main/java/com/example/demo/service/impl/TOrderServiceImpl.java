@@ -11,11 +11,16 @@ import com.example.demo.result.CodeMsg;
 import com.example.demo.service.TOrderService;
 import com.example.demo.mapper.TOrderMapper;
 import com.example.demo.vo.goodsvo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 /**
 * @author 83799
@@ -23,6 +28,7 @@ import java.util.Date;
 * @createDate 2023-10-05 12:03:10
 */
 @Service
+@Slf4j
 public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder>
     implements TOrderService{
     @Autowired
@@ -66,11 +72,31 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder>
     }
 
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
-    @Override
-    public boolean checkRepeatSeckill(BigInteger userid, Long goodsId) {
-        TOrder order = tOrderMapper.findByUserIdAndGoodsId(userid, goodsId);
-        return order != null;
+    public boolean checkRepeatSeckill(BigInteger userId, Long goodsId) {
+        // 使用用户ID和商品ID生成唯一的键
+        String redisKey = "seckill:" + userId + ":" + goodsId;
+
+        // 从 Redis 中检查是否有记录
+        Boolean hasRecord = (Boolean) redisTemplate.opsForValue().get(redisKey);
+
+        log.info("redis中有没有" + hasRecord);
+
+        if (hasRecord != null && hasRecord) {
+            return true;
+        } else {
+            // 从数据库中查询
+            TOrder order = tOrderMapper.findByUserIdAndGoodsId(userId, goodsId);
+            if (order != null) {
+                // 将结果存入 Redis，同时设置一个合理的过期时间，例如一天
+                redisTemplate.opsForValue().set(redisKey, true, 3, TimeUnit.HOURS);
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
 

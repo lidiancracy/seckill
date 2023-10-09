@@ -46,10 +46,10 @@ public class TokenInterceptor implements HandlerInterceptor {
                         UserContext.setUser(user);
 
                         // 重置token映射的过期时间
-                        redisTemplate.expire("user:token:" + token, 30, TimeUnit.MINUTES);
+                        redisTemplate.expire("user:token:" + token, 60, TimeUnit.MINUTES);
 
                         // 重置手机号映射的过期时间
-                        redisTemplate.expire("user:id:" + user.getId(), 30, TimeUnit.MINUTES);
+                        redisTemplate.expire("user:id:" + user.getId(), 60, TimeUnit.MINUTES);
 
                         return true;
                     }
