@@ -14,7 +14,9 @@ import java.util.Date;
 @Data
 public class goodsvo extends TGoods {
     private BigDecimal seckillPrice;
+
     private Integer stockCount;
+
 
     private Date startDate;
     private Date endDate;
