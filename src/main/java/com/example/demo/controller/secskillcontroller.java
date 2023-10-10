@@ -60,7 +60,7 @@ public class secskillcontroller {
         // 检查用户是否已经参与过秒杀
         if (tOrderService.checkRepeatSeckill(user.getId(), goodsId)) {
             model.addAttribute("errmsg", "您已经参与过此次秒杀，请勿重复操作。");
-            return "seckill_fail";
+            return "queueing";
         }
 
         // 获取并预减Redis库存
@@ -68,7 +68,7 @@ public class secskillcontroller {
 
         if (currentStock == null || currentStock <= 0) {
             model.addAttribute("errmsg", CodeMsg.STOCK_MIAOSHA.getMsg());
-            return "seckill_fail";
+            return "queueing";
         }
 
         // 如果库存充足则预减库存
@@ -76,18 +76,19 @@ public class secskillcontroller {
 
         if (goods == null || goods.getStockCount() <= 0) {
             model.addAttribute("errmsg", CodeMsg.STOCK_MIAOSHA.getMsg());
-            return "seckill_fail";
+            return "queueing";
         }
 
         // 发送消息至RabbitMQ进行异步处理
         SeckillMessage message = new SeckillMessage();
         message.setUser(user);
         message.setGoods(goods);
+        String taskId = UUID.randomUUID().toString(); // 创建唯一任务ID
+        message.setTaskId(taskId); // 设置taskId
         seckillMessageSender.sendSeckillMessage(message);
 
-        // 创建唯一任务ID并将其与初始状态关联
-        String taskId = UUID.randomUUID().toString();
         redisTemplate.opsForValue().set("seckill:task:" + taskId, "waiting");
+
 
 // 将任务ID添加到模型以供前端使用
         model.addAttribute("taskId", taskId);

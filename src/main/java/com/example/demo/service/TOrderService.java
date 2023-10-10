@@ -14,7 +14,7 @@ import java.math.BigInteger;
 */
 public interface TOrderService extends IService<TOrder> {
 
-    TOrder executeSeckill(TUser user, goodsvo goods);
+    TOrder executeSeckill(TUser user, goodsvo goods, String taskid);
 
     boolean checkRepeatSeckill(BigInteger id, Long goodsId);
 }

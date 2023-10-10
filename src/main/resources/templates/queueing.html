@@ -1,30 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>秒杀结果</title>
-    <script>
-        function checkStatus(taskId) {
-            fetch("/seckill/status?taskId=" + taskId)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        alert("秒杀成功！");
-                        window.location.href = "/goods/detail?goodsId=YOUR_GOODS_ID"; // 这里的URL需要修改为您的商品详情页URL
-                    } else if (data.status === "fail") {
-                        alert("秒杀失败");
-                        window.location.reload();  // 或者导航到其他页面
-                    } else {
-                        setTimeout(() => checkStatus(taskId), 2000);  // 每2秒检查一次
-                    }
-                });
-        }
-    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-<body onload="checkStatus('{{ taskId }}')">
-<div>
+<body>
+<div id="statusDiv" th:text="${errmsg != null ? errmsg : '等待中...'}">
     等待中...
 </div>
+
+<script th:inline="javascript">
+    // 通过Thymeleaf的语法获取taskId
+    let taskId = /*[[${taskId}]]*/ "defaultTaskId";
+
+    function checkSeckillStatus() {
+        $.ajax({
+            url: '/seckill/status',
+            type: 'GET',
+            data: {
+                taskId: taskId
+            },
+            success: function (data) {
+                if (data.status !== 'waiting') {
+                    console.log(taskId)
+                    console.log(data.status)
+                    // 当状态不再是'waiting'，停止轮询，并在页面上显示结果。
+                    clearInterval(polling);
+
+                    if (data.status === 'success') {
+                        $('#statusDiv').text('秒杀成功！');
+                    } else {
+                        $('#statusDiv').text('秒杀失败。原因：' + data.status);
+                    }
+                }
+            },
+            error: function (err) {
+                console.error('Error while checking seckill status:', err);
+            }
+        });
+    }
+
+    // 使用JavaScript定时器进行轮询，例如每2秒检查一次秒杀状态
+    let polling = setInterval(checkSeckillStatus, 2000);
+</script>
 </body>
 </html>

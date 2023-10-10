@@ -42,7 +42,7 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder>
 
     @Override
     @Transactional
-    public TOrder executeSeckill(TUser user, goodsvo goods) {
+    public TOrder executeSeckill(TUser user, goodsvo goods, String taskid) {
         try {
             if (checkRepeatSeckill(user.getId(), goods.getId())) {
                 log.info("用户已参与过此次秒杀, 用户ID: {}, 商品ID: {}", user.getId(), goods.getId());
@@ -77,6 +77,8 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder>
 
             // 5. 保存秒杀订单到数据库
             tSeckillOrderMapper.insert(seckillOrder);
+            //跟新任务状态
+            redisTemplate.opsForValue().set("seckill:task:" + taskid, "success");
 
             // 6. 将用户ID和商品ID存入Redis，表示该用户已经成功参与了该商品的秒杀
             String redisKey = "seckill:" + user.getId() + ":" + goods.getId();

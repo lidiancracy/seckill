@@ -15,5 +15,6 @@ import java.io.Serializable;
 public class SeckillMessage implements Serializable {
     private TUser user;
     private goodsvo goods;
+    private String taskId;
 }
 
