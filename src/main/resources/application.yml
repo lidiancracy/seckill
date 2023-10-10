@@ -2,10 +2,7 @@ spring:
   thymeleaf:
     cache: false
   datasource:
-    username: root
-    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     hikari:
       idle-timeout: 1800000
       maximum-pool-size: 10
@@ -16,27 +13,24 @@ spring:
       connection-test-query: SELECT 1
   redis:
     database: 3
-    host: 127.0.0.1
-    port: 6379
     lettuce:
       pool:
         max-idle: 200
         max-active: 8
         max-wait: 10000ms
   rabbitmq:
-    host: 10.249.46.195
     port: 5672
     stream:
       username: guest
       password: guest
+  profiles:
+    active: prod
 mybatis-plus:
-  #  ??????
   mapper-locations: classpath*:/mapper/*Mapper.xml
-  #  ????????? ?????
   type-aliases-package: com.example.demo.pojo
-
-
 
 logging:
   level:
     com.example.demo.mapper: debug
+
+

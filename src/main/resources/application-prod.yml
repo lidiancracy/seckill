@@ -1,0 +1,14 @@
+#  spring.config.activate.on-profile=prod # 指定该配置文件只在生产环境下生效
+spring:
+  datasource:
+    username: root
+    password: root
+    url: jdbc:mysql://10.249.46.195:3306/seckill?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+  redis:
+    host: 10.249.46.195
+    port: 6379
+  rabbitmq:
+    host: 10.249.46.195
+  config:
+    activate:
+      on-profile: prod
